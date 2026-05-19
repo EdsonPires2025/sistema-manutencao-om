@@ -1,0 +1,489 @@
+// ============================================================
+// SISTEMA DE MANUTENÇÃO PREVENTIVA
+// ============================================================
+
+// Dados iniciais (simulando localStorage)
+let equipamentos = [];
+let ordensServico = [];
+let equipe = [];
+
+// Contador sequencial para OM
+let contadorOM = 1;
+
+// Carregar dados do localStorage
+function carregarDados() {
+    const savedEquipamentos = localStorage.getItem('equipamentos');
+    const savedOMs = localStorage.getItem('ordensServico');
+    const savedEquipe = localStorage.getItem('equipe');
+    const savedContador = localStorage.getItem('contadorOM');
+    
+    if (savedEquipamentos) equipamentos = JSON.parse(savedEquipamentos);
+    if (savedOMs) ordensServico = JSON.parse(savedOMs);
+    if (savedEquipe) equipe = JSON.parse(savedEquipe);
+    if (savedContador) contadorOM = parseInt(savedContador);
+    
+    // Dados de exemplo se estiver vazio
+    if (equipamentos.length === 0) {
+        equipamentos = [
+            { id: 1, nome: "Prensa Hidráulica 01", tipo: "Hidráulica", periodicidade: 30, ultimaOM: "", proximaOM: "", ativo: true, equipe: "Manutenção", instrucoes: "Verificar nível de óleo" },
+            { id: 2, nome: "Esteira Transportadora 03", tipo: "Mecânica", periodicidade: 60, ultimaOM: "", proximaOM: "", ativo: true, equipe: "Manutenção", instrucoes: "Lubrificar rolamentos" }
+        ];
+    }
+    
+    if (ordensServico.length === 0) {
+        ordensServico = [];
+    }
+    
+    if (equipe.length === 0) {
+        equipe = [
+            { id: 1, nome: "José Silva", email: "jose@empresa.com", cargo: "Técnico Sr", equipe: "Manutenção", ativo: true, notificacoes: true }
+        ];
+    }
+    
+    atualizarInterface();
+}
+
+// Salvar dados no localStorage
+function salvarDados() {
+    localStorage.setItem('equipamentos', JSON.stringify(equipamentos));
+    localStorage.setItem('ordensServico', JSON.stringify(ordensServico));
+    localStorage.setItem('equipe', JSON.stringify(equipe));
+    localStorage.setItem('contadorOM', contadorOM.toString());
+}
+
+// Gerar código único da OM
+function gerarCodigoOM() {
+    const agora = new Date();
+    const ano = agora.getFullYear().toString().slice(-2);
+    const dia = agora.getDate().toString().padStart(2, '0');
+    const mes = (agora.getMonth() + 1).toString().padStart(2, '0');
+    const hora = agora.getHours().toString().padStart(2, '0');
+    const minuto = agora.getMinutes().toString().padStart(2, '0');
+    
+    const prefixo = ano + dia + mes + hora + minuto;
+    const sequencial = contadorOM.toString().padStart(4, '0');
+    const codigo = prefixo + sequencial;
+    
+    contadorOM++;
+    return codigo;
+}
+
+// Gerar OMs automaticamente
+function gerarOMsAutomaticamente() {
+    const hoje = new Date();
+    let omsGeradas = 0;
+    
+    equipamentos.forEach(equip => {
+        if (!equip.ativo) return;
+        
+        let deveGerar = false;
+        
+        if (!equip.proximaOM || equip.proximaOM === "") {
+            deveGerar = true;
+        } else {
+            const dataProx = new Date(equip.proximaOM);
+            if (hoje >= dataProx) {
+                deveGerar = true;
+            }
+        }
+        
+        if (deveGerar) {
+            const novaDataPrevista = new Date(hoje);
+            novaDataPrevista.setDate(novaDataPrevista.getDate() + equip.periodicidade);
+            
+            const codigoOM = gerarCodigoOM();
+            
+            ordensServico.push({
+                id: codigoOM,
+                equipamentoId: equip.id,
+                equipamentoNome: equip.nome,
+                dataAbertura: hoje.toLocaleString(),
+                dataPrevista: novaDataPrevista.toLocaleDateString(),
+                dataConclusao: null,
+                status: "aberta",
+                responsavel: equip.equipe,
+                observacoes: ""
+            });
+            
+            equip.ultimaOM = hoje.toLocaleDateString();
+            equip.proximaOM = novaDataPrevista.toLocaleDateString();
+            
+            omsGeradas++;
+            
+            // Enviar email para equipe
+            const emailsEquipe = equipe.filter(m => m.ativo && m.notificacoes && m.equipe === equip.equipe);
+            emailsEquipe.forEach(membro => {
+                enviarEmail(membro.email, `Nova OM: ${codigoOM}`, `Equipamento: ${equip.nome}\nData Prevista: ${equip.proximaOM}`);
+            });
+        }
+    });
+    
+    if (omsGeradas > 0) {
+        mostrarAlerta(`${omsGeradas} OM(s) gerada(s) automaticamente!`, 'success');
+        salvarDados();
+        atualizarInterface();
+    }
+}
+
+// Enviar email (simulado - em produção usaria backend)
+function enviarEmail(email, assunto, mensagem) {
+    console.log(`Email enviado para ${email}: ${assunto} - ${mensagem}`);
+    // Em produção: implementar API de email (EmailJS, SendGrid, etc)
+}
+
+// Concluir OM
+function concluirOM(id, observacoes) {
+    const om = ordensServico.find(o => o.id === id);
+    if (om && om.status === 'aberta') {
+        om.status = 'concluida';
+        om.dataConclusao = new Date().toLocaleString();
+        om.observacoes = observacoes;
+        salvarDados();
+        atualizarInterface();
+        mostrarAlerta(`OM ${id} concluída com sucesso!`, 'success');
+        fecharModal('modalConcluirOM');
+    } else {
+        mostrarAlerta('OM não encontrada ou já concluída!', 'error');
+    }
+}
+
+// Gerar OMs manualmente
+function gerarOMsManualmente() {
+    gerarOMsAutomaticamente();
+    mostrarAlerta('Verificação de OMs concluída!', 'success');
+}
+
+// Enviar email lembrete
+function enviarEmailLembrete() {
+    const hoje = new Date();
+    const omsAtrasadas = ordensServico.filter(om => {
+        if (om.status !== 'aberta') return false;
+        const dataPrevista = new Date(om.dataPrevista);
+        return hoje > dataPrevista;
+    });
+    
+    if (omsAtrasadas.length === 0) {
+        mostrarAlerta('Nenhuma OM atrasada encontrada!', 'success');
+        return;
+    }
+    
+    const emails = equipe.filter(m => m.ativo && m.notificacoes).map(m => m.email);
+    emails.forEach(email => {
+        enviarEmail(email, '⚠️ Lembrete de Manutenção', `${omsAtrasadas.length} OM(s) estão pendentes. Acesse o sistema para mais detalhes.`);
+    });
+    
+    mostrarAlerta(`Lembrete enviado para ${emails.length} membro(s) da equipe!`, 'success');
+}
+
+// CRUD Equipamentos
+function adicionarEquipamento(equip) {
+    const novoId = equipamentos.length > 0 ? Math.max(...equipamentos.map(e => e.id)) + 1 : 1;
+    equipamentos.push({
+        id: novoId,
+        ...equip,
+        ultimaOM: "",
+        proximaOM: "",
+        ativo: true
+    });
+    salvarDados();
+    atualizarInterface();
+    mostrarAlerta('Equipamento adicionado com sucesso!', 'success');
+}
+
+function editarEquipamento(id, dados) {
+    const index = equipamentos.findIndex(e => e.id === id);
+    if (index !== -1) {
+        equipamentos[index] = { ...equipamentos[index], ...dados };
+        salvarDados();
+        atualizarInterface();
+        mostrarAlerta('Equipamento atualizado!', 'success');
+    }
+}
+
+function excluirEquipamento(id) {
+    if (confirm('Tem certeza que deseja excluir este equipamento?')) {
+        equipamentos = equipamentos.filter(e => e.id !== id);
+        salvarDados();
+        atualizarInterface();
+        mostrarAlerta('Equipamento excluído!', 'success');
+    }
+}
+
+// CRUD Equipe
+function adicionarMembro(membro) {
+    const novoId = equipe.length > 0 ? Math.max(...equipe.map(m => m.id)) + 1 : 1;
+    equipe.push({ id: novoId, ...membro, ativo: true });
+    salvarDados();
+    atualizarInterface();
+    mostrarAlerta('Membro adicionado!', 'success');
+}
+
+function editarMembro(id, dados) {
+    const index = equipe.findIndex(m => m.id === id);
+    if (index !== -1) {
+        equipe[index] = { ...equipe[index], ...dados };
+        salvarDados();
+        atualizarInterface();
+        mostrarAlerta('Membro atualizado!', 'success');
+    }
+}
+
+function excluirMembro(id) {
+    if (confirm('Tem certeza?')) {
+        equipe = equipe.filter(m => m.id !== id);
+        salvarDados();
+        atualizarInterface();
+        mostrarAlerta('Membro excluído!', 'success');
+    }
+}
+
+// Atualizar interface
+function atualizarInterface() {
+    atualizarStats();
+    renderizarEquipamentos();
+    renderizarOMs();
+    renderizarEquipe();
+    renderizarProximasManutencoes();
+}
+
+function atualizarStats() {
+    document.getElementById('totalEstacoes').textContent = equipamentos.length;
+    document.getElementById('estacoesAtivas').textContent = equipamentos.filter(e => e.ativo).length;
+    document.getElementById('totalOMs').textContent = ordensServico.length;
+    document.getElementById('omsAbertas').textContent = ordensServico.filter(o => o.status === 'aberta').length;
+    document.getElementById('currentDate').textContent = new Date().toLocaleString();
+}
+
+function renderizarEquipamentos() {
+    const tbody = document.getElementById('listaEquipamentos');
+    tbody.innerHTML = equipamentos.map(eq => `
+        <tr>
+            <td>${eq.id}</td>
+            <td><strong>${eq.nome}</strong><br><small>${eq.instrucoes || ''}</small></td>
+            <td>${eq.tipo}</td>
+            <td>${eq.periodicidade}</td>
+            <td>${eq.proximaOM || '—'}</td>
+            <td><span class="${eq.ativo ? 'status-aberta' : 'status-concluida'}">${eq.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
+            <td>
+                <button class="btn-icon btn-edit" onclick="abrirModalEquipamento(${eq.id})">✏️</button>
+                <button class="btn-icon btn-delete" onclick="excluirEquipamento(${eq.id})">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderizarOMs() {
+    const tbody = document.getElementById('listaOMs');
+    tbody.innerHTML = ordensServico.map(om => `
+        <tr>
+            <td><strong>${om.id}</strong></td>
+            <td>${om.equipamentoNome}</td>
+            <td>${om.dataAbertura}</td>
+            <td>${om.dataPrevista}</td>
+            <td><span class="status-${om.status === 'aberta' ? 'aberta' : 'concluida'}">${om.status === 'aberta' ? '🟢 Aberta' : '✅ Concluída'}</span></td>
+            <td>${om.responsavel}</td>
+            <td>
+                ${om.status === 'aberta' ? `<button class="btn-icon" onclick="abrirModalConcluirOM('${om.id}')">✅ Concluir</button>` : '—'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderizarEquipe() {
+    const tbody = document.getElementById('listaEquipe');
+    tbody.innerHTML = equipe.map(m => `
+        <tr>
+            <td>${m.id}</td>
+            <td><strong>${m.nome}</strong></td>
+            <td>${m.email}</td>
+            <td>${m.cargo || '—'}</td>
+            <td>${m.equipe}</td>
+            <td><span class="${m.ativo ? 'status-aberta' : 'status-concluida'}">${m.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
+            <td>
+                <button class="btn-icon btn-edit" onclick="abrirModalEquipe(${m.id})">✏️</button>
+                <button class="btn-icon btn-delete" onclick="excluirMembro(${m.id})">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderizarProximasManutencoes() {
+    const hoje = new Date();
+    const proximas = equipamentos.filter(eq => {
+        if (!eq.ativo || !eq.proximaOM) return false;
+        const dataProx = new Date(eq.proximaOM);
+        const dias = Math.ceil((dataProx - hoje) / (1000 * 60 * 60 * 24));
+        return dias >= 0 && dias <= 7;
+    }).map(eq => {
+        const dataProx = new Date(eq.proximaOM);
+        const dias = Math.ceil((dataProx - hoje) / (1000 * 60 * 60 * 24));
+        return { ...eq, diasRestantes: dias };
+    }).sort((a, b) => a.diasRestantes - b.diasRestantes);
+    
+    const tbody = document.getElementById('proximasManutencoes');
+    tbody.innerHTML = proximas.map(eq => `
+        <tr>
+            <td><strong>${eq.nome}</strong></td>
+            <td>${eq.proximaOM}</td>
+            <td><span class="${eq.diasRestantes <= 3 ? 'status-atrasada' : eq.diasRestantes <= 5 ? 'status-aberta' : 'status-concluida'}">${eq.diasRestantes} dias</span></td>
+        </tr>
+    `).join('');
+}
+
+// UI Functions
+function abrirTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function abrirModalEquipamento(id = null) {
+    const modal = document.getElementById('modalEquipamento');
+    const form = document.getElementById('formEquipamento');
+    
+    if (id) {
+        const eq = equipamentos.find(e => e.id === id);
+        if (eq) {
+            document.getElementById('eqNome').value = eq.nome;
+            document.getElementById('eqTipo').value = eq.tipo;
+            document.getElementById('eqPeriodicidade').value = eq.periodicidade;
+            document.getElementById('eqEquipe').value = eq.equipe;
+            document.getElementById('eqInstrucoes').value = eq.instrucoes || '';
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                editarEquipamento(id, {
+                    nome: document.getElementById('eqNome').value,
+                    tipo: document.getElementById('eqTipo').value,
+                    periodicidade: parseInt(document.getElementById('eqPeriodicidade').value),
+                    equipe: document.getElementById('eqEquipe').value,
+                    instrucoes: document.getElementById('eqInstrucoes').value
+                });
+                fecharModal('modalEquipamento');
+                form.reset();
+            };
+        }
+    } else {
+        form.reset();
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            adicionarEquipamento({
+                nome: document.getElementById('eqNome').value,
+                tipo: document.getElementById('eqTipo').value,
+                periodicidade: parseInt(document.getElementById('eqPeriodicidade').value),
+                equipe: document.getElementById('eqEquipe').value,
+                instrucoes: document.getElementById('eqInstrucoes').value
+            });
+            fecharModal('modalEquipamento');
+            form.reset();
+        };
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function abrirModalEquipe(id = null) {
+    const modal = document.getElementById('modalEquipe');
+    const form = document.getElementById('formEquipe');
+    
+    if (id) {
+        const membro = equipe.find(m => m.id === id);
+        if (membro) {
+            document.getElementById('eqpNome').value = membro.nome;
+            document.getElementById('eqpEmail').value = membro.email;
+            document.getElementById('eqpCargo').value = membro.cargo || '';
+            document.getElementById('eqpEquipe').value = membro.equipe;
+            document.getElementById('eqpNotif').value = membro.notificacoes ? 'SIM' : 'NAO';
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                editarMembro(id, {
+                    nome: document.getElementById('eqpNome').value,
+                    email: document.getElementById('eqpEmail').value,
+                    cargo: document.getElementById('eqpCargo').value,
+                    equipe: document.getElementById('eqpEquipe').value,
+                    notificacoes: document.getElementById('eqpNotif').value === 'SIM'
+                });
+                fecharModal('modalEquipe');
+                form.reset();
+            };
+        }
+    } else {
+        form.reset();
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            adicionarMembro({
+                nome: document.getElementById('eqpNome').value,
+                email: document.getElementById('eqpEmail').value,
+                cargo: document.getElementById('eqpCargo').value,
+                equipe: document.getElementById('eqpEquipe').value,
+                notificacoes: document.getElementById('eqpNotif').value === 'SIM'
+            });
+            fecharModal('modalEquipe');
+            form.reset();
+        };
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function abrirModalConcluirOM(id = null) {
+    const modal = document.getElementById('modalConcluirOM');
+    const form = document.getElementById('formConcluirOM');
+    
+    if (id) {
+        document.getElementById('omId').value = id;
+        document.getElementById('omId').readOnly = true;
+    } else {
+        document.getElementById('omId').value = '';
+        document.getElementById('omId').readOnly = false;
+    }
+    
+    form.onsubmit = (e) => {
+        e.preventDefault();
+        concluirOM(document.getElementById('omId').value, document.getElementById('omObs').value);
+        form.reset();
+    };
+    
+    modal.style.display = 'flex';
+}
+
+function fecharModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function mostrarAlerta(mensagem, tipo) {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${tipo}`;
+    alert.textContent = mensagem;
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
+
+// Configurar verificação automática a cada hora
+function iniciarVerificacaoAutomatica() {
+    setInterval(() => {
+        gerarOMsAutomaticamente();
+    }, 3600000); // 1 hora
+}
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    carregarDados();
+    iniciarVerificacaoAutomatica();
+    
+    // Fechar modal ao clicar fora
+    window.onclick = (event) => {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    };
+});
+
+// Executar verificação inicial
+setTimeout(() => {
+    gerarOMsAutomaticamente();
+}, 1000);

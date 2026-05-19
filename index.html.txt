@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ordem de Manutenção</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            font-size: 40px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .logo h1 span {
+            color: #4CAF50;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-icon {
+            font-size: 40px;
+        }
+
+        .stat-info h3 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .stat-info p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 0 30px;
+            background: white;
+        }
+
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #4CAF50;
+        }
+
+        .tab-btn.active {
+            color: #4CAF50;
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-aberta {
+            background: #ffc107;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .status-concluida {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close {
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            padding: 15px 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .form-buttons {
+            padding: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 0 5px;
+        }
+
+        .alert {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            z-index: 1001;
+        }
+
+        .alert-success { background: #4CAF50; }
+        .alert-error { background: #f44336; }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .tab-btn {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <span class="logo-icon">🔧</span>
+                <h1>Sistema de <span>Manutenção Preventiva</span></h1>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🏭</div>
+                <div class="stat-info">
+                    <h3 id="totalEstacoes">0</h3>
+                    <p>Total de Equipamentos</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <h3 id="estacoesAtivas">0</h3>
+                    <p>Equipamentos Ativos</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-info">
+                    <h3 id="totalOMs">0</h3>
+                    <p>Total de OMs</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-info">
+                    <h3 id="omsAbertas">0</h3>
+                    <p>OMs em Aberto</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="abrirTab('equipamentos')">📟 Equipamentos</button>
+            <button class="tab-btn" onclick="abrirTab('oms')">📋 Ordens de Serviço</button>
+            <button class="tab-btn" onclick="abrirTab('equipe')">👥 Equipe</button>
+        </div>
+
+        <div id="tab-equipamentos" class="tab-content active">
+            <div class="toolbar">
+                <button class="btn-primary" onclick="abrirModalEquipamento()">➕ Novo Equipamento</button>
+                <button class="btn-secondary" onclick="gerarOMsManualmente()">🔧 Gerar OMs Agora</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>ID</th><th>Equipamento</th><th>Tipo</th><th>Periodicidade</th><th>Próxima OM</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="listaEquipamentos"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-oms" class="tab-content">
+            <div class="toolbar">
+                <button class="btn-primary" onclick="abrirModalConcluirOM()">✅ Concluir OM</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>N° OM</th><th>Equipamento</th><th>Data Abertura</th><th>Data Prevista</th><th>Status</th><th>Responsável</th><th>Ações</th></tr></thead>
+                    <tbody id="listaOMs"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-equipe" class="tab-content">
+            <div class="toolbar">
+                <button class="btn-primary" onclick="abrirModalEquipe()">👤 Novo Membro</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>ID</th><th>Nome</th><th>Email</th><th>Cargo</th><th>Equipe</th><th>Status</th><th>Ações</th></tr></thead>
+                    <tbody id="listaEquipe"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Equipamento -->
+    <div id="modalEquipamento" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Novo Equipamento</h2><span class="close" onclick="fecharModal('modalEquipamento')">&times;</span></div>
+            <form id="formEquipamento">
+                <div class="form-group"><label>Nome:</label><input type="text" id="eqNome" required></div>
+                <div class="form-group"><label>Tipo:</label><select id="eqTipo"><option>Hidráulica</option><option>Elétrica</option><option>Mecânica</option></select></div>
+                <div class="form-group"><label>Periodicidade (dias):</label><input type="number" id="eqPeriodicidade" required></div>
+                <div class="form-group"><label>Equipe:</label><input type="text" id="eqEquipe" value="Manutenção"></div>
+                <div class="form-buttons"><button type="button" class="btn-secondary" onclick="fecharModal('modalEquipamento')">Cancelar</button><button type="submit" class="btn-primary">Salvar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Equipe -->
+    <div id="modalEquipe" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Novo Membro</h2><span class="close" onclick="fecharModal('modalEquipe')">&times;</span></div>
+            <form id="formEquipe">
+                <div class="form-group"><label>Nome:</label><input type="text" id="eqpNome" required></div>
+                <div class="form-group"><label>Email:</label><input type="email" id="eqpEmail" required></div>
+                <div class="form-group"><label>Cargo:</label><input type="text" id="eqpCargo"></div>
+                <div class="form-group"><label>Equipe:</label><input type="text" id="eqpEquipe" value="Manutenção"></div>
+                <div class="form-buttons"><button type="button" class="btn-secondary" onclick="fecharModal('modalEquipe')">Cancelar</button><button type="submit" class="btn-primary">Salvar</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Concluir OM -->
+    <div id="modalConcluirOM" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Concluir OM</h2><span class="close" onclick="fecharModal('modalConcluirOM')">&times;</span></div>
+            <form id="formConcluirOM">
+                <div class="form-group"><label>Número da OM:</label><input type="text" id="omId" placeholder="Ex: 261805124701" required></div>
+                <div class="form-buttons"><button type="button" class="btn-secondary" onclick="fecharModal('modalConcluirOM')">Cancelar</button><button type="submit" class="btn-primary">Concluir</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Dados
+        let equipamentos = [];
+        let ordensServico = [];
+        let equipe = [];
+        let contadorOM = 1;
+
+        function carregarDados() {
+            const savedEquipamentos = localStorage.getItem('equipamentos');
+            const savedOMs = localStorage.getItem('ordensServico');
+            const savedEquipe = localStorage.getItem('equipe');
+            
+            if (savedEquipamentos) equipamentos = JSON.parse(savedEquipamentos);
+            if (savedOMs) ordensServico = JSON.parse(savedOMs);
+            if (savedEquipe) equipe = JSON.parse(savedEquipe);
+            
+            if (equipamentos.length === 0) {
+                equipamentos = [
+                    { id: 1, nome: "Prensa Hidráulica 01", tipo: "Hidráulica", periodicidade: 30, ultimaOM: "", proximaOM: "", ativo: true, equipe: "Manutenção" },
+                    { id: 2, nome: "Esteira Transportadora 03", tipo: "Mecânica", periodicidade: 60, ultimaOM: "", proximaOM: "", ativo: true, equipe: "Manutenção" }
+                ];
+            }
+            
+            if (equipe.length === 0) {
+                equipe = [
+                    { id: 1, nome: "José Silva", email: "jose@empresa.com", cargo: "Técnico", equipe: "Manutenção", ativo: true }
+                ];
+            }
+            
+            atualizarInterface();
+        }
+
+        function salvarDados() {
+            localStorage.setItem('equipamentos', JSON.stringify(equipamentos));
+            localStorage.setItem('ordensServico', JSON.stringify(ordensServico));
+            localStorage.setItem('equipe', JSON.stringify(equipe));
+        }
+
+        function gerarCodigoOM() {
+            const agora = new Date();
+            const ano = agora.getFullYear().toString().slice(-2);
+            const dia = agora.getDate().toString().padStart(2, '0');
+            const mes = (agora.getMonth() + 1).toString().padStart(2, '0');
+            const hora = agora.getHours().toString().padStart(2, '0');
+            const minuto = agora.getMinutes().toString().padStart(2, '0');
+            const prefixo = ano + dia + mes + hora + minuto;
+            const sequencial = contadorOM.toString().padStart(4, '0');
+            contadorOM++;
+            return prefixo + sequencial;
+        }
+
+        function gerarOMsAutomaticamente() {
+            const hoje = new Date();
+            let omsGeradas = 0;
+            
+            equipamentos.forEach(equip => {
+                if (!equip.ativo) return;
+                let deveGerar = false;
+                
+                if (!equip.proximaOM || equip.proximaOM === "") {
+                    deveGerar = true;
+                } else {
+                    const dataProx = new Date(equip.proximaOM);
+                    if (hoje >= dataProx) deveGerar = true;
+                }
+                
+                if (deveGerar) {
+                    const novaDataPrevista = new Date(hoje);
+                    novaDataPrevista.setDate(novaDataPrevista.getDate() + equip.periodicidade);
+                    const codigoOM = gerarCodigoOM();
+                    
+                    ordensServico.push({
+                        id: codigoOM,
+                        equipamentoNome: equip.nome,
+                        dataAbertura: hoje.toLocaleString(),
+                        dataPrevista: novaDataPrevista.toLocaleDateString(),
+                        status: "aberta",
+                        responsavel: equip.equipe
+                    });
+                    
+                    equip.ultimaOM = hoje.toLocaleDateString();
+                    equip.proximaOM = novaDataPrevista.toLocaleDateString();
+                    omsGeradas++;
+                }
+            });
+            
+            if (omsGeradas > 0) {
+                salvarDados();
+                atualizarInterface();
+                mostrarAlerta(`${omsGeradas} OM(s) gerada(s)!`, 'success');
+            }
+        }
+
+        function gerarOMsManualmente() {
+            gerarOMsAutomaticamente();
+        }
+
+        function concluirOM(id) {
+            const om = ordensServico.find(o => o.id === id);
+            if (om && om.status === 'aberta') {
+                om.status = 'concluida';
+                om.dataConclusao = new Date().toLocaleString();
+                salvarDados();
+                atualizarInterface();
+                mostrarAlerta(`OM ${id} concluída!`, 'success');
+                fecharModal('modalConcluirOM');
+            } else {
+                mostrarAlerta('OM não encontrada!', 'error');
+            }
+        }
+
+        function adicionarEquipamento(equip) {
+            const novoId = equipamentos.length > 0 ? Math.max(...equipamentos.map(e => e.id)) + 1 : 1;
+            equipamentos.push({ id: novoId, ...equip, ultimaOM: "", proximaOM: "", ativo: true });
+            salvarDados();
+            atualizarInterface();
+            mostrarAlerta('Equipamento adicionado!', 'success');
+        }
+
+        function excluirEquipamento(id) {
+            if (confirm('Tem certeza?')) {
+                equipamentos = equipamentos.filter(e => e.id !== id);
+                salvarDados();
+                atualizarInterface();
+                mostrarAlerta('Equipamento excluído!', 'success');
+            }
+        }
+
+        function adicionarMembro(membro) {
+            const novoId = equipe.length > 0 ? Math.max(...equipe.map(m => m.id)) + 1 : 1;
+            equipe.push({ id: novoId, ...membro, ativo: true });
+            salvarDados();
+            atualizarInterface();
+            mostrarAlerta('Membro adicionado!', 'success');
+        }
+
+        function excluirMembro(id) {
+            if (confirm('Tem certeza?')) {
+                equipe = equipe.filter(m => m.id !== id);
+                salvarDados();
+                atualizarInterface();
+                mostrarAlerta('Membro excluído!', 'success');
+            }
+        }
+
+        function atualizarInterface() {
+            document.getElementById('totalEstacoes').textContent = equipamentos.length;
+            document.getElementById('estacoesAtivas').textContent = equipamentos.filter(e => e.ativo).length;
+            document.getElementById('totalOMs').textContent = ordensServico.length;
+            document.getElementById('omsAbertas').textContent = ordensServico.filter(o => o.status === 'aberta').length;
+            
+            const tbodyEq = document.getElementById('listaEquipamentos');
+            tbodyEq.innerHTML = equipamentos.map(eq => `
+                <tr>
+                    <td>${eq.id}</td>
+                    <td>${eq.nome}</td>
+                    <td>${eq.tipo}</td>
+                    <td>${eq.periodicidade}</td>
+                    <td>${eq.proximaOM || '—'}</td>
+                    <td><span class="status-aberta">ATIVO</span></td>
+                    <td><button class="btn-icon" onclick="excluirEquipamento(${eq.id})">🗑️</button></td>
+                </tr>
+            `).join('');
+            
+            const tbodyOM = document.getElementById('listaOMs');
+            tbodyOM.innerHTML = ordensServico.map(om => `
+                <tr>
+                    <td><strong>${om.id}</strong></td>
+                    <td>${om.equipamentoNome}</td>
+                    <td>${om.dataAbertura}</td>
+                    <td>${om.dataPrevista}</td>
+                    <td><span class="${om.status === 'aberta' ? 'status-aberta' : 'status-concluida'}">${om.status === 'aberta' ? '🟢 Aberta' : '✅ Concluída'}</span></td>
+                    <td>${om.responsavel}</td>
+                    <td>${om.status === 'aberta' ? `<button class="btn-icon" onclick="abrirModalConcluirOM('${om.id}')">✅</button>` : '—'}</td>
+                </tr>
+            `).join('');
+            
+            const tbodyEqp = document.getElementById('listaEquipe');
+            tbodyEqp.innerHTML = equipe.map(m => `
+                <tr>
+                    <td>${m.id}</td>
+                    <td>${m.nome}</td>
+                    <td>${m.email}</td>
+                    <td>${m.cargo || '—'}</td>
+                    <td>${m.equipe}</td>
+                    <td><span class="status-aberta">ATIVO</span></td>
+                    <td><button class="btn-icon" onclick="excluirMembro(${m.id})">🗑️</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function abrirTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function abrirModalEquipamento() {
+            const modal = document.getElementById('modalEquipamento');
+            const form = document.getElementById('formEquipamento');
+            form.reset();
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                adicionarEquipamento({
+                    nome: document.getElementById('eqNome').value,
+                    tipo: document.getElementById('eqTipo').value,
+                    periodicidade: parseInt(document.getElementById('eqPeriodicidade').value),
+                    equipe: document.getElementById('eqEquipe').value
+                });
+                fecharModal('modalEquipamento');
+            };
+            modal.style.display = 'flex';
+        }
+
+        function abrirModalEquipe() {
+            const modal = document.getElementById('modalEquipe');
+            const form = document.getElementById('formEquipe');
+            form.reset();
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                adicionarMembro({
+                    nome: document.getElementById('eqpNome').value,
+                    email: document.getElementById('eqpEmail').value,
+                    cargo: document.getElementById('eqpCargo').value,
+                    equipe: document.getElementById('eqpEquipe').value
+                });
+                fecharModal('modalEquipe');
+            };
+            modal.style.display = 'flex';
+        }
+
+        function abrirModalConcluirOM(id = null) {
+            const modal = document.getElementById('modalConcluirOM');
+            const form = document.getElementById('formConcluirOM');
+            if (id) {
+                document.getElementById('omId').value = id;
+                document.getElementById('omId').readOnly = true;
+            } else {
+                document.getElementById('omId').value = '';
+                document.getElementById('omId').readOnly = false;
+            }
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                concluirOM(document.getElementById('omId').value);
+                form.reset();
+            };
+            modal.style.display = 'flex';
+        }
+
+        function fecharModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function mostrarAlerta(mensagem, tipo) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${tipo}`;
+            alert.textContent = mensagem;
+            document.body.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        window.onclick = (event) => {
+            if (event.target.classList.contains('modal')) event.target.style.display = 'none';
+        };
+
+        carregarDados();
+        setInterval(() => gerarOMsAutomaticamente(), 3600000);
+        setTimeout(() => gerarOMsAutomaticamente(), 1000);
+    </script>
+</body>
+</html>
