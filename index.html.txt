@@ -345,7 +345,9 @@
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>ID</th><th>Equipamento</th><th>Tipo</th><th>Periodicidade</th><th>Próxima OM</th><th>Status</th><th>Ações</th></tr></thead>
+                    <thead>
+                        <tr><th>ID</th><th>Equipamento</th><th>Tipo</th><th>Periodicidade</th><th>Próxima OM</th><th>Status</th><th>Ações</th></tr>
+                    </thead>
                     <tbody id="listaEquipamentos"></tbody>
                 </table>
             </div>
@@ -357,7 +359,9 @@
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>N° OM</th><th>Equipamento</th><th>Data Abertura</th><th>Data Prevista</th><th>Status</th><th>Responsável</th><th>Ações</th></tr></thead>
+                    <thead>
+                        <tr><th>N° OM</th><th>Equipamento</th><th>Data Abertura</th><th>Data Prevista</th><th>Status</th><th>Responsável</th><th>Ações</th></tr>
+                    </thead>
                     <tbody id="listaOMs"></tbody>
                 </table>
             </div>
@@ -369,7 +373,9 @@
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>ID</th><th>Nome</th><th>Email</th><th>Cargo</th><th>Equipe</th><th>Status</th><th>Ações</th></tr></thead>
+                    <thead>
+                        <tr><th>ID</th><th>Nome</th><th>Email</th><th>Cargo</th><th>Equipe</th><th>Status</th><th>Ações</th></tr>
+                    </thead>
                     <tbody id="listaEquipe"></tbody>
                 </table>
             </div>
@@ -416,7 +422,6 @@
     </div>
 
     <script>
-        // Dados
         let equipamentos = [];
         let ordensServico = [];
         let equipe = [];
